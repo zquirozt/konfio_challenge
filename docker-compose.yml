@@ -1,0 +1,54 @@
+version: '3.1'
+
+services:
+
+  postgres:
+    image: postgres:9.6.6
+    env_file:
+      - environment/.tsenv
+    ports:
+      - 5432:5432
+    networks:
+      network:
+        ipv4_address: 10.5.0.6
+
+  loader:
+    container_name: "loader"
+    build: .
+    command: /app/start.sh
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
+    networks:
+      network:
+        ipv4_address: 10.5.0.7
+
+  grafana:
+    image: grafana/grafana:8.2.2
+    container_name: grafana
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    env_file:
+      - environment/.gfenv
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana-data:/var/lib/grafana
+    networks:
+      network:
+        ipv4_address: 10.5.0.5
+    depends_on:
+      - loader
+
+networks:
+  network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.5.0.0/16
+          gateway: 10.5.0.1
+
+volumes:
+  grafana-data:
